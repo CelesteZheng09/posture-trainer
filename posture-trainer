@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>体态训练管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4efe6; --paper-2:#fbf8f1; --ink:#2b2620; --ink-soft:#6b6258; --ink-faint:#9c9286;
+    --clay:#c8603c; --clay-deep:#a94a2c; --clay-soft:#e8a07f; --sage:#7a8c5f; --sage-bg:#e4e9d6;
+    --gold:#cf9b46; --line:#e2d9ca; --shadow:0 6px 22px -10px rgba(60,45,30,.32); --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(circle at 18% 0%,#efe7d6 0,transparent 55%),radial-gradient(circle at 92% 100%,#ece2cf 0,transparent 50%),#e8e0d0;
+    font-family:"Noto Sans SC",sans-serif;color:var(--ink);
+    display:flex;flex-direction:column;min-height:100vh;overflow:hidden;
+  }
+  /* 整机布局 */
+  .app{flex:1;display:flex;flex-direction:column;max-width:430px;width:100%;margin:0 auto;position:relative;overflow:hidden;background:var(--paper)}
+  .head{padding:max(env(safe-area-inset-top),20px) 22px 8px}
+  .head .d{display:flex;align-items:baseline;gap:8px}
+  .head .d b{font-family:"Noto Serif SC",serif;font-size:28px;line-height:1}
+  .head .d span{font-size:12.5px;color:var(--ink-soft)}
+  .head .d .wd{margin-left:auto;font-size:12.5px;color:var(--ink-soft)}
+  .head .theme-tag{display:none;align-items:center;gap:7px;margin-top:11px;padding:6px 14px 6px 11px;border-radius:30px;background:var(--clay);color:#fff;font-size:13px;font-weight:500;box-shadow:var(--shadow)}
+  .head .theme-tag.show{display:inline-flex}
+  .head .theme-tag .dot{width:7px;height:7px;border-radius:50%;background:#fff;opacity:.85}
+  .body{flex:1;position:relative;overflow:hidden}
+  /* 页面切换 */
+  .page{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+  .page.active{display:flex}
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 22px 20px}
+  .scroll::-webkit-scrollbar{width:0}
+
+  /* ========== Tab1 仪式打卡 ========== */
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:8px 22px 0;transition:opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1)}
+  .screen.hide{opacity:0;pointer-events:none;transform:scale(.97)}
+  .pre{justify-content:center}
+  .pre .lead{font-family:"Noto Serif SC",serif;font-size:17px;color:var(--ink-soft);margin-bottom:4px}
+  .pre .theme{font-family:"Noto Serif SC",serif;font-size:23px;font-weight:700;margin-bottom:30px;color:var(--clay-deep);text-align:center}
+  .btnwrap{position:relative;width:210px;height:210px;display:grid;place-items:center}
+  .ripple{position:absolute;inset:0;border-radius:50%;background:var(--clay);opacity:.13;animation:breathe 3.4s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(.86);opacity:.10}50%{transform:scale(1.04);opacity:.20}}
+  .prog-ring{position:absolute;inset:6px;border-radius:50%;background:conic-gradient(var(--clay) 0deg, transparent 0deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 9px));mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 9px))}
+  .bigbtn{position:relative;width:184px;height:184px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#d77a52,#c8603c 55%,#a94a2c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 18px 40px -12px rgba(169,74,44,.75),inset 0 2px 8px rgba(255,255,255,.3);cursor:pointer;transition:transform .12s ease}
+  .bigbtn:active{transform:scale(.97)}
+  .bigbtn.charging{transform:scale(1.04)}
+  .bigbtn .ic{font-size:30px;line-height:1}
+  .bigbtn .t1{font-family:"Noto Serif SC",serif;font-size:20px;font-weight:700;letter-spacing:.05em}
+  .bigbtn .t2{font-size:11.5px;opacity:.9}
+  .pre .hint{margin-top:26px;font-size:12.5px;color:var(--ink-faint)}
+  .pre .plan{margin-top:8px;font-size:12px;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);padding:7px 14px;border-radius:20px}
+  /* 横幅 */
+  .banner{position:absolute;top:0;left:0;right:0;z-index:50;background:linear-gradient(180deg,#c8603c,#a94a2c);color:#fff;text-align:center;padding:46px 20px 26px;border-radius:0 0 26px 26px;transform:translateY(-115%);box-shadow:0 18px 30px -12px rgba(80,30,12,.6)}
+  .banner.down{animation:bannerDown .7s cubic-bezier(.18,.9,.3,1.1) forwards}
+  .banner.up{animation:bannerUp .55s ease-in forwards}
+  @keyframes bannerDown{to{transform:translateY(0)}}
+  @keyframes bannerUp{from{transform:translateY(0)}to{transform:translateY(-115%)}}
+  .banner .bg{font-family:"Noto Serif SC",serif;font-size:27px;font-weight:900;letter-spacing:.08em}
+  .banner .bs{font-size:13px;opacity:.92;margin-top:7px}
+  .banner .ribbon{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);width:26px;height:26px;background:#a94a2c;rotate:45deg;border-radius:5px}
+  /* 打卡后 */
+  .post{overflow-y:auto;align-items:stretch;padding-bottom:20px}
+  .post::-webkit-scrollbar{width:0}
+  .cheer{font-family:"Noto Serif SC",serif;text-align:center;margin:6px 0 4px}
+  .cheer .l1{font-size:15px;color:var(--ink-soft)}
+  .cheer .l2{font-size:19px;font-weight:700;color:var(--clay-deep);margin-top:3px}
+  .cheer .l2 em{font-style:normal;font-size:26px;color:var(--clay)}
+  .fullbar{width:100%;margin:14px 0 6px}
+  .fullbar .lab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);margin-bottom:6px}
+  .fullbar .track{height:10px;border-radius:6px;background:var(--line);overflow:hidden}
+  .fullbar .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--clay-soft),var(--clay));width:0;transition:width 1s cubic-bezier(.22,1,.36,1)}
+  .cal{width:100%;margin-top:12px}
+  .cal .mh{display:flex;align-items:center;justify-content:center;gap:14px;font-family:"Noto Serif SC",serif;font-size:14px;color:var(--ink-soft);margin-bottom:9px}
+  .cal .mh .nav{cursor:pointer;color:var(--clay);padding:2px 6px;font-size:15px}
+  .cal .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal .wk{text-align:center;font-size:10.5px;color:var(--ink-faint);padding-bottom:2px}
+  .cell{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-size:12px;color:var(--ink-faint);background:var(--paper-2);border:1px solid var(--line);position:relative}
+  .cell.empty{background:transparent;border:none}
+  .cell.done{background:radial-gradient(circle at 50% 42%,var(--clay-soft),var(--clay));color:#fff;border-color:transparent;font-weight:700;box-shadow:0 3px 8px -3px rgba(169,74,44,.6)}
+  .cell.done::after{content:"";position:absolute;inset:0;border-radius:9px;border:1.5px solid rgba(255,255,255,.45);margin:3px}
+  .cell.miss{border-style:dashed;border-color:var(--clay-soft);color:var(--clay-soft);cursor:pointer}
+  .cell.today{outline:2px solid var(--ink);outline-offset:1px}
+  .cell.stamp{animation:stamp .5s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes stamp{0%{transform:scale(2.2);opacity:0}60%{transform:scale(.9);opacity:1}100%{transform:scale(1)}}
+  .legend{display:flex;gap:12px;justify-content:center;font-size:10.5px;color:var(--ink-soft);margin-top:10px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:4px;vertical-align:-1px;margin-right:3px}
+  .miles{font-size:11.5px;color:var(--clay);text-decoration:underline;margin:14px auto 0;cursor:pointer;display:block;text-align:center}
+  .post-acts{display:flex;gap:10px;margin-top:14px;width:100%}
+  .pbtn{flex:1;text-align:center;font-size:12.5px;padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer}
+  .pbtn.ghost{color:var(--clay)}
+  /* 基础流程（打卡后展开，可选） */
+  .basics{background:linear-gradient(180deg,#eef2e2,#e7ecd7);border:1px solid #d6dec2;border-radius:16px;padding:14px 15px;margin-top:16px;width:100%}
+  .basics h4{font-family:"Noto Serif SC",serif;font-size:14px;color:#5f6a45;margin-bottom:3px}
+  .basics p{font-size:11.5px;color:#7d855f;margin-bottom:11px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#5f6a45;background:#fff;border:1px solid #d3dcbd;padding:6px 10px;border-radius:20px;margin:0 6px 6px 0;cursor:pointer}
+  .chip i{width:14px;height:14px;border-radius:5px;border:1.5px solid #aebb8c;display:inline-block;transition:.15s}
+  .chip.on i{background:var(--sage);border-color:var(--sage)}
+  .chip.on{color:var(--sage)}
+
+  /* ========== Tab2 训练详情 ========== */
+  .week-pick{display:flex;gap:7px;overflow-x:auto;padding:6px 2px 12px;margin:0 -2px}
+  .week-pick::-webkit-scrollbar{height:0}
+  .wd{flex:none;width:46px;height:56px;border-radius:13px;background:var(--paper-2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--ink-soft);cursor:pointer}
+  .wd b{font-family:"Noto Serif SC",serif;font-size:15px;color:var(--ink)}
+  .wd.active{background:var(--ink);border-color:var(--ink)}
+  .wd.active,.wd.active b{color:var(--paper)}
+  .day-title{font-family:"Noto Serif SC",serif;font-size:16px;color:var(--clay-deep);margin:6px 2px 12px}
+  .ex-card{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;gap:13px;position:relative}
+  .ex-ic{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#f0d9cb,#e8c3ad);flex:none;display:grid;place-items:center;color:var(--clay-deep)}
+  .ex-ic svg{width:32px;height:32px}
+  .ex-body{flex:1;min-width:0}
+  .ex-nm{font-size:15px;font-weight:700}
+  .ex-rep{display:inline-block;font-size:12px;color:#fff;background:var(--clay);padding:2px 9px;border-radius:20px;margin-top:6px}
+  .ex-tip{font-size:12px;color:var(--ink-soft);margin-top:9px;line-height:1.5;padding-left:11px;border-left:2px solid var(--clay-soft)}
+  .ex-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--clay);margin-top:9px;font-weight:500;text-decoration:none}
+  .empty-day{text-align:center;color:var(--ink-faint);font-size:13px;padding:40px 0;font-family:"Noto Serif SC",serif}
+  /* 编辑态行内 */
+  .ex-card.edit-row{border-style:dashed;border-color:var(--clay-soft)}
+  .row-acts{display:flex;flex-direction:column;gap:7px;flex:none}
+  .ico-btn{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer}
+  .ico-btn.del{color:var(--clay);border-color:#eccabd}
+  .ico-btn svg{width:15px;height:15px}
+  .add-row{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--clay-soft);color:var(--clay);border-radius:14px;padding:14px;font-size:13.5px;font-weight:500;margin-top:2px;cursor:pointer}
+
+  /* FAB */
+  .fab{position:absolute;right:18px;bottom:84px;width:54px;height:54px;border-radius:50%;background:var(--clay);color:#fff;display:grid;place-items:center;box-shadow:0 12px 24px -8px rgba(200,96,60,.7);z-index:35;cursor:pointer;transition:transform .15s}
+  .fab:active{transform:scale(.92)}
+  .fab svg{width:24px;height:24px}
+  .fab.editing{background:var(--ink)}
+  .fab.hidden{display:none}
+  .edit-banner{position:absolute;left:18px;right:84px;bottom:96px;background:var(--ink);color:var(--paper);font-size:12px;padding:9px 13px;border-radius:12px;z-index:34;display:none;align-items:center;gap:8px;box-shadow:var(--shadow)}
+  .edit-banner.show{display:flex}
+  .edit-banner b{color:var(--clay-soft);font-weight:700}
+
+  /* tabbar */
+  .tabbar{height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--paper-2);border-top:1px solid var(--line);display:flex;align-items:center;flex:none;z-index:40}
+  .tabbar .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-faint);cursor:pointer;height:64px;justify-content:center}
+  .tabbar .tb svg{width:22px;height:22px}
+  .tabbar .tb.active{color:var(--clay)}
+
+  .cfx{position:absolute;inset:0;z-index:55;pointer-events:none}
+  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--paper);font-size:12px;padding:8px 15px;border-radius:20px;opacity:0;transition:.3s;z-index:60;white-space:nowrap;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 模态 */
+  .modal{position:absolute;inset:0;z-index:80;display:none;align-items:flex-end;justify-content:center;background:rgba(40,32,24,.42)}
+  .modal.show{display:flex;animation:fade .2s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .sheet{width:100%;background:var(--paper-2);border-radius:22px 22px 0 0;padding:20px 22px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px -10px rgba(40,30,20,.4);animation:slideUp .28s cubic-bezier(.22,1,.36,1)}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .sheet h3{font-family:"Noto Serif SC",serif;font-size:17px;margin-bottom:16px;color:#5b5247}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px}
+  .field input{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);-webkit-user-select:text;user-select:text}
+  .field input:focus{outline:none;border-color:var(--clay-soft)}
+  .sheet-acts{display:flex;gap:10px;margin-top:8px}
+  .sheet-acts button{flex:1;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer}
+  .sheet-acts .cancel{background:var(--line);color:var(--ink-soft)}
+  .sheet-acts .save{background:var(--clay);color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div class="d"><b id="hDay">21</b><span id="hUnit">日 · 6月</span><span class="wd" id="hWd">星期日</span></div>
+    <span class="theme-tag" id="hTheme"><span class="dot"></span><span id="hThemeTxt">今日主题</span></span>
+  </div>
+
+  <div class="body">
+    <canvas class="cfx" id="cfx"></canvas>
+
+    <!-- ===== Tab1 今日打卡 ===== -->
+    <div class="page active" id="page1">
+      <!-- 打卡前 -->
+      <div class="screen pre" id="pre">
+        <div class="lead">今天 · 准备好了吗</div>
+        <div class="theme" id="preTheme">背部强化 B</div>
+        <div class="btnwrap">
+          <div class="ripple"></div>
+          <div class="prog-ring" id="ring"></div>
+          <div class="bigbtn" id="bigbtn">
+            <span class="ic">✦</span>
+            <span class="t1">长按打卡</span>
+            <span class="t2">按住蓄力 1 秒</span>
+          </div>
+        </div>
+        <div class="plan" id="prePlan">今日 3 个动作 · 约 16 分钟</div>
+        <div class="miles" id="viewCal">📅 查看打卡日历</div>
+        <div class="basics" id="basics"></div>
+      </div>
+      <!-- 横幅 -->
+      <div class="banner" id="banner">
+        <div class="bg">今日已完成</div>
+        <div class="bs" id="bannerSub">第 1 次打卡 · 6 月又近一步</div>
+        <div class="ribbon"></div>
+      </div>
+      <!-- 打卡后 -->
+      <div class="screen post hide" id="post">
+        <div class="cheer">
+          <div class="l1" id="cheerL1">6 月已坚持</div>
+          <div class="l2"><em id="cheerCnt">0</em> 天 · <span id="cheerTail">继续保持</span></div>
+        </div>
+        <div class="fullbar">
+          <div class="lab"><span>满勤进度</span><span id="flab">0 / 30 天</span></div>
+          <div class="track"><div class="fill" id="fill"></div></div>
+        </div>
+        <div class="cal">
+          <div class="mh"><span class="nav" id="calPrev">◀</span><span id="calTitle">2026 年 6 月</span><span class="nav" id="calNext">▶</span></div>
+          <div class="grid" id="calGrid"></div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#c8603c"></i>已打卡</span>
+          <span><i style="background:#fbf8f1;border:1px solid #e2d9ca"></i>未打卡</span>
+          <span><i style="border:1px dashed #e8a07f;background:transparent"></i>漏签可补</span>
+        </div>
+        <div class="post-acts">
+          <div class="pbtn" id="backPre">返回</div>
+          <div class="pbtn ghost" id="undo">↩ 撤销今日打卡</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Tab2 训练详情 ===== -->
+    <div class="page" id="page2">
+      <div class="scroll">
+        <div class="week-pick" id="weekPick"></div>
+        <div class="day-title" id="dayTitle">周三 · 背部强化 B</div>
+        <div id="exList"></div>
+      </div>
+    </div>
+
+    <!-- FAB / 编辑横幅 -->
+    <div class="edit-banner" id="editBanner">正在编辑 · 改动<b>实时保存</b>到本机</div>
+    <div class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 编辑动作模态 -->
+    <div class="modal" id="modal">
+      <div class="sheet">
+        <h3 id="modalTitle">新增动作</h3>
+        <div class="field"><label>动作名称</label><input id="fName" placeholder="例如：弹力带面拉 Face Pull"></div>
+        <div class="field"><label>次数 / 组数 / 时长</label><input id="fRep" placeholder="例如：15 次 × 4 组 · 6 min"></div>
+        <div class="field"><label>动作要点</label><input id="fTip" placeholder="例如：先沉肩，肩胛贴肋滑动，不要猛夹"></div>
+        <div class="field"><label>教程链接（可选）</label><input id="fLink" placeholder="https://..."></div>
+        <div class="sheet-acts">
+          <button class="cancel" id="mCancel">取消</button>
+          <button class="save" id="mSave">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tb active" data-tab="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>今日打卡</div>
+    <div class="tb" data-tab="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>训练详情</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= 数据层（localStorage） ================= */
+const LS_KEY='posture_trainer_v1';
+const WD=['日','一','二','三','四','五','六']; // getDay()=0→日
+const WD_FULL=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+// 默认每周计划：键 0..6 = 周日..周六
+const DEFAULT_DATA={
+  version:3,
+  // 每周主题（与文档一致）
+  themes:{1:'背部强化 A',2:'普拉提/瑜伽',3:'背部强化 B',4:'普拉提/瑜伽',5:'背部强化 A',6:'胸椎灵活+拉伸',0:'休息'},
+  // 每天动作（与文档「每周训练打卡总表」逐项对齐）
+  plan:{
+    1:[
+      {name:'弹力带坐姿划船',rep:'12 次 × 4 组 · 8 min',tip:'先沉肩，肩胛后收带动手臂，不要耸肩',link:'https://www.bilibili.com/video/BV1FeCHYGEPn',linkText:'10 分钟弹力带居家练背·跟练（B站）'},
+      {name:'弹力带站姿划船',rep:'12 次 × 3 组 · 6 min',tip:'核心收紧、身体不晃，肘贴近身体后拉',link:'https://www.bilibili.com/video/BV13STxzhEXV',linkText:'10 个弹力带练背动作（B站）'},
+      {name:'弹力带高位下拉',rep:'12 次 × 3 组 · 6 min',tip:'下拉时肩胛先下沉，再发力，配合每日基础流程',link:'https://www.bilibili.com/video/BV1Rh4y1t7Jv',linkText:'弹力带练背阔肌系列（B站）'}
+    ],
+    2:[
+      {name:'普拉提 / 瑜伽课程',rep:'核心 + 柔韧 · 60 min',tip:'每周 1-2 次照常上，呼吸带动、骨盆中立',link:'',linkText:'线下课程'},
+      {name:'每日基础流程',rep:'靠墙天使 / 收下巴 / 门框拉伸 · 5 min',tip:'收下巴矫正头前引最关键',link:'https://www.bilibili.com/video/BV1xY411J7mC',linkText:'每天 5 分钟改善头前倾（B站）'}
+    ],
+    3:[
+      {name:'弹力带面拉 Face Pull',rep:'15 次 × 4 组 · 6 min',tip:'先沉肩，肩胛贴肋滑动，不要猛夹',link:'https://www.bilibili.com/video/BV1Fp421Z7rg',linkText:'面拉改善圆肩驼背·详解（B站）'},
+      {name:'反向飞鸟',rep:'15 次 × 4 组 · 5 min',tip:'哑铃单边 3–5kg 起，宁轻勿重不耸肩',link:'https://www.bilibili.com/video/BV1oK411N7QX',linkText:'弹力带反向飞鸟教学（B站）'},
+      {name:'弹力带扩胸 Pull-apart',rep:'15 次 × 3 组 · 4 min',tip:'手臂平举，肩胛后收打开胸口',link:'https://www.bilibili.com/video/BV19Z5ezrEzx',linkText:'保姆级弹力带练背·改善圆肩（B站）'},
+      {name:'YTWL 矫正训练',rep:'各 10 次 · 5 min',tip:'靠墙做、收核心防塌腰，肩胛带动手臂，配合每日基础流程',link:'https://b23.tv/gYZEkAK',linkText:'YTWL 矫正训练（B站）'}
+    ],
+    4:[
+      {name:'普拉提 / 瑜伽课程',rep:'核心 + 柔韧 · 60 min',tip:'每周 1-2 次照常上，呼吸带动、骨盆中立',link:'',linkText:'线下课程'},
+      {name:'每日基础流程',rep:'靠墙天使 / 收下巴 / 门框拉伸 · 5 min',tip:'收下巴矫正头前引最关键',link:'https://www.bilibili.com/video/BV1WE411s73t',linkText:'每日 3 分钟体态训练·靠墙站（B站）'}
+    ],
+    5:[
+      {name:'弹力带坐姿划船',rep:'12 次 × 4 组 · 8 min',tip:'先沉肩，肩胛后收带动手臂，不要耸肩',link:'https://www.bilibili.com/video/BV1FeCHYGEPn',linkText:'10 分钟弹力带居家练背·跟练（B站）'},
+      {name:'弹力带站姿划船',rep:'12 次 × 3 组 · 6 min',tip:'核心收紧、身体不晃，肘贴近身体后拉',link:'https://www.bilibili.com/video/BV13STxzhEXV',linkText:'10 个弹力带练背动作（B站）'},
+      {name:'弹力带高位下拉',rep:'12 次 × 3 组 · 6 min',tip:'下拉时肩胛先下沉，再发力，配合每日基础流程',link:'https://www.bilibili.com/video/BV1Rh4y1t7Jv',linkText:'弹力带练背阔肌系列（B站）'}
+    ],
+    6:[
+      {name:'泡沫轴胸椎伸展',rep:'×10 · 4 min',tip:'泡沫轴垫上背，逐段后仰打开胸椎',link:'https://www.bilibili.com/video/BV1qXp6zUEnc',linkText:'泡沫轴辅助胸椎伸展（B站）'},
+      {name:'猫牛式',rep:'×10 · 3 min',tip:'脊柱逐节活动，配合呼吸',link:'https://www.bilibili.com/video/BV1W41GBpE75',linkText:'猫牛式伸展跟练（B站）'},
+      {name:'婴儿式 + 侧向拉伸',rep:'各 30 秒 · 3 min',tip:'放松腰背，侧向拉开体侧',link:'https://www.bilibili.com/video/BV1kg4y1b7Vp',linkText:'胸椎活动度·Jeff 讲解（B站）'},
+      {name:'胸 / 上斜方 / 颈侧拉伸',rep:'各 30 秒 · 5 min',tip:'缓慢拉伸过紧肌群，不憋气',link:'https://www.bilibili.com/video/BV1U7ngzVEkL',linkText:'胸椎灵活性·缓解肩颈僵硬（B站）'}
+    ],
+    0:[
+      {name:'休息 / 散步',rep:'只做每日基础流程 · 5 min',tip:'轻松活动，让身体恢复',link:'https://www.bilibili.com/video/BV1xY411J7mC',linkText:'每日基础流程·改善头前倾（B站）'}
+    ]
+  },
+  // 每日基础流程（6 项，天天做）
+  dailyBasics:['收下巴','靠墙站立','门框拉伸','膈肌呼吸','足弓激活','骨盆稳定'],
+  // 打卡记录：{ "2026-6-21": {checked:true, basics:[true,...]} }
+  checkins:{}
+};
+
+function load(){
+  try{const s=localStorage.getItem(LS_KEY);if(s)return JSON.parse(s);}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+let STORAGE_OK=true;
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e){STORAGE_OK=false;/* opaque-origin/sandbox: 降级为内存态，不中断流程 */}}
+let DATA=load();
+// 兼容旧结构补全
+['themes','plan','dailyBasics','checkins'].forEach(k=>{if(!DATA[k])DATA[k]=JSON.parse(JSON.stringify(DEFAULT_DATA[k]));});
+// 版本迁移：旧版计划内容用新版覆盖，但保留用户的打卡记录
+if((DATA.version||1) < DEFAULT_DATA.version){
+  const keep=DATA.checkins;
+  DATA=JSON.parse(JSON.stringify(DEFAULT_DATA));
+  DATA.checkins=keep||{};
+  save();
+}
+
+/* ================= 日期工具 ================= */
+const NOW=new Date(2026,5,21); // 当前演示日期：2026-6-21（与文档一致）。真机可改成 new Date()
+function dkey(y,m,d){return y+'-'+m+'-'+d;} // m: 1-12
+function todayKey(){return dkey(NOW.getFullYear(),NOW.getMonth()+1,NOW.getDate());}
+function weekdayOf(y,m,d){return new Date(y,m-1,d).getDay();}
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+
+/* ================= 顶部日期 ================= */
+function renderHead(){
+  document.getElementById('hDay').textContent=NOW.getDate();
+  document.getElementById('hUnit').textContent='日 · '+(NOW.getMonth()+1)+'月';
+  document.getElementById('hWd').textContent=WD_FULL[NOW.getDay()];
+}
+
+/* ================= 状态 ================= */
+let curTab=1;
+let editMode=false;
+let selDay=NOW.getDay();      // Tab2 选中的星期
+let calY=NOW.getFullYear(), calM=NOW.getMonth()+1; // 月历显示的年月
+let editTarget={day:null,idx:null}; // 编辑/新增的目标
+
+/* ================= Tab1 仪式打卡 ================= */
+const elPre=document.getElementById('pre'), elPost=document.getElementById('post'),
+      elBanner=document.getElementById('banner'), elRing=document.getElementById('ring'),
+      elBtn=document.getElementById('bigbtn'), elCfx=document.getElementById('cfx');
+
+function isChecked(key){return DATA.checkins[key] && DATA.checkins[key].checked;}
+
+function renderPre(){
+  const th=DATA.themes[NOW.getDay()]||'今日训练';
+  document.getElementById('preTheme').textContent=th;
+  const acts=DATA.plan[NOW.getDay()]||[];
+  let mins=0;acts.forEach(a=>{const m=(a.rep||'').match(/(\d+)\s*min/);if(m)mins+=parseInt(m[1]);});
+  document.getElementById('prePlan').textContent='今日 '+acts.length+' 个动作'+(mins?(' · 约 '+mins+' 分钟'):'');
+  renderBasics();
+}
+
+function monthDoneCount(y,m){
+  let n=0;for(let d=1;d<=daysInMonth(y,m);d++){if(isChecked(dkey(y,m,d)))n++;}return n;
+}
+function renderPost(stampToday){
+  const mDone=monthDoneCount(NOW.getFullYear(),NOW.getMonth()+1);
+  document.getElementById('cheerL1').textContent=(NOW.getMonth()+1)+' 月已坚持';
+  document.getElementById('cheerCnt').textContent=mDone;
+  const total=daysInMonth(NOW.getFullYear(),NOW.getMonth()+1);
+  const left=total-mDone;
+  document.getElementById('cheerTail').textContent=left>0?('再 '+left+' 天满勤'):'本月满勤达成 🎉';
+  renderCal(stampToday);
+}
+function renderCal(stampToday){
+  document.getElementById('calTitle').textContent=calY+' 年 '+calM+' 月';
+  const grid=document.getElementById('calGrid');grid.innerHTML='';
+  ['一','二','三','四','五','六','日'].forEach(w=>{const e=document.createElement('div');e.className='wk';e.textContent=w;grid.appendChild(e);});
+  // 周一为首列：getDay 0(日)→6, 1(一)→0
+  const firstW=(weekdayOf(calY,calM,1)+6)%7;
+  for(let i=0;i<firstW;i++){const e=document.createElement('div');e.className='cell empty';grid.appendChild(e);}
+  const dim=daysInMonth(calY,calM);
+  const isCurMonth=(calY===NOW.getFullYear() && calM===NOW.getMonth()+1);
+  for(let d=1;d<=dim;d++){
+    const e=document.createElement('div');e.className='cell';
+    const key=dkey(calY,calM,d);
+    const isToday=isCurMonth && d===NOW.getDate();
+    const past=(new Date(calY,calM-1,d) < new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()));
+    if(isChecked(key)){
+      e.classList.add('done');e.textContent=d;
+      if(isToday && stampToday)e.classList.add('stamp');
+    } else if(past){
+      // 过去未打卡 = 漏签可补
+      e.classList.add('miss');e.textContent=d;e.title='漏签 · 点击补卡';
+      e.onclick=()=>{makeup(key,d);};
+    } else {
+      e.textContent=d;
+    }
+    if(isToday)e.classList.add('today');
+    grid.appendChild(e);
+  }
+  // 满勤进度（始终基于当前真实月份）
+  const mDone=monthDoneCount(NOW.getFullYear(),NOW.getMonth()+1);
+  const total=daysInMonth(NOW.getFullYear(),NOW.getMonth()+1);
+  document.getElementById('flab').textContent=mDone+' / '+total+' 天';
+  const fill=document.getElementById('fill');
+  requestAnimationFrame(()=>{fill.style.width=(mDone/total*100)+'%';});
+}
+function makeup(key,d){
+  DATA.checkins[key]={checked:true,basics:DATA.checkins[key]?DATA.checkins[key].basics:[]};save();
+  toast('已补卡 '+d+' 日');renderPost(false);
+}
+function renderBasics(){
+  const key=todayKey();
+  const st=DATA.checkins[key]&&DATA.checkins[key].basics?DATA.checkins[key].basics:[];
+  const wrap=document.getElementById('basics');
+  let h='<h4>5 分钟基础流程</h4><p>无论今天练什么，这 6 项都要完成</p>';
+  DATA.dailyBasics.forEach((b,i)=>{h+='<span class="chip'+(st[i]?' on':'')+'" data-bi="'+i+'"><i></i>'+b+'</span>';});
+  wrap.innerHTML=h;
+  wrap.querySelectorAll('.chip').forEach(c=>{
+    c.onclick=()=>{
+      const i=+c.dataset.bi;
+      if(!DATA.checkins[key])DATA.checkins[key]={checked:false,basics:[]};
+      if(!DATA.checkins[key].basics)DATA.checkins[key].basics=[];
+      DATA.checkins[key].basics[i]=!DATA.checkins[key].basics[i];save();
+      c.classList.toggle('on');
+    };
+  });
+}
+
+// 切换到已打卡视图
+function showPost(stamp){
+  elPre.classList.add('hide');elPost.classList.remove('hide');
+  calY=NOW.getFullYear();calM=NOW.getMonth()+1;
+  renderPost(stamp);
+  if(typeof clampNav==='function')clampNav();
+  // 撤销按钮只在今天已打卡时显示
+  document.getElementById('undo').style.display = isChecked(todayKey())?'block':'none';
+}
+function showPre(){
+  elPost.classList.add('hide');elPre.classList.remove('hide');setRing(0);
+  elBanner.classList.remove('down','up');elBanner.style.transform='';
+}
+
+/* 长按蓄力 */
+let raf=null,startT=0,charging=false;const DUR=1000;
+function setRing(p){elRing.style.background='conic-gradient(var(--clay) '+(p*360)+'deg, transparent '+(p*360)+'deg)';}
+function tick(t){
+  if(!startT)startT=t;
+  const p=Math.min((t-startT)/DUR,1);
+  setRing(p);
+  if(p>=1){finish();return;}
+  raf=requestAnimationFrame(tick);
+}
+function begin(e){e.preventDefault();if(charging)return;charging=true;startT=0;elBtn.classList.add('charging');raf=requestAnimationFrame(tick);}
+function cancelCharge(){
+  if(!charging)return;charging=false;elBtn.classList.remove('charging');cancelAnimationFrame(raf);
+  let m=(elRing.style.background.match(/(\d+\.?\d*)deg/)||[])[1]||0;let p=parseFloat(m)/360;
+  const t0=performance.now();const dur=260;
+  (function back(t){const k=Math.min((t-t0)/dur,1);setRing(p*(1-k));if(k<1)requestAnimationFrame(back);})(t0);
+}
+function finish(){
+  charging=false;elBtn.classList.remove('charging');setRing(1);
+  if(navigator.vibrate)navigator.vibrate([20,40,30]);
+  // 写入打卡
+  const key=todayKey();
+  DATA.checkins[key]={checked:true,basics:DATA.checkins[key]?DATA.checkins[key].basics:[]};save();
+  confetti(false);
+  // 横幅次数
+  const mDone=monthDoneCount(NOW.getFullYear(),NOW.getMonth()+1);
+  document.getElementById('bannerSub').textContent='第 '+mDone+' 次打卡 · '+(NOW.getMonth()+1)+' 月又近一步';
+  elBanner.classList.remove('up');elBanner.classList.add('down');
+  setTimeout(()=>{
+    elBanner.classList.remove('down');elBanner.classList.add('up');
+    showPost(true);
+  },1500);
+}
+elBtn.addEventListener('pointerdown',begin);
+elBtn.addEventListener('pointerup',cancelCharge);
+elBtn.addEventListener('pointerleave',cancelCharge);
+elBtn.addEventListener('pointercancel',cancelCharge);
+
+document.getElementById('undo').onclick=()=>{
+  const key=todayKey();
+  if(DATA.checkins[key])DATA.checkins[key].checked=false;save();
+  showPre();toast('已撤销今日打卡');
+};
+// 从打卡前进入日历查看
+document.getElementById('viewCal').onclick=()=>{showPost(false);};
+// 从日历返回
+document.getElementById('backPre').onclick=()=>{showPre();};
+// 月历翻页：起点 2026 年 6 月，终点当前真实月份
+const MIN_Y=2026, MIN_M=6;
+function ym(y,m){return y*12+m;}
+function clampNav(){
+  const prev=document.getElementById('calPrev'), next=document.getElementById('calNext');
+  const cur=ym(calY,calM), min=ym(MIN_Y,MIN_M), max=ym(NOW.getFullYear(),NOW.getMonth()+1);
+  prev.style.visibility = cur<=min ? 'hidden' : 'visible';
+  next.style.visibility = cur>=max ? 'hidden' : 'visible';
+}
+document.getElementById('calPrev').onclick=()=>{
+  if(ym(calY,calM)<=ym(MIN_Y,MIN_M))return;
+  calM--;if(calM<1){calM=12;calY--;}renderCal(false);clampNav();
+};
+document.getElementById('calNext').onclick=()=>{
+  if(ym(calY,calM)>=ym(NOW.getFullYear(),NOW.getMonth()+1))return;
+  calM++;if(calM>12){calM=1;calY++;}renderCal(false);clampNav();
+};
+
+/* 彩花 */
+function confetti(grand){
+  const dpr=window.devicePixelRatio||1;const w=elCfx.clientWidth,h=elCfx.clientHeight;
+  elCfx.width=w*dpr;elCfx.height=h*dpr;const ctx=elCfx.getContext('2d');ctx.scale(dpr,dpr);
+  const cols=['#c8603c','#e8a07f','#7a8c5f','#cf9b46','#a94a2c','#e9c46a'];
+  const N=grand?160:90;const ps=[];
+  for(let i=0;i<N;i++){ps.push({x:w/2+(Math.random()-.5)*40,y:h*0.42,vx:(Math.random()-.5)*(grand?13:9),vy:(Math.random()*-1-(grand?7:5)),g:.22+Math.random()*.12,s:4+Math.random()*5,rot:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:0,max:90+Math.random()*40,shape:Math.random()<.5});}
+  let frame=0;
+  function draw(){ctx.clearRect(0,0,w,h);let alive=false;
+    ps.forEach(p=>{if(p.life>p.max)return;alive=true;p.life++;p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+      const a=Math.max(0,1-p.life/p.max);ctx.globalAlpha=a;ctx.fillStyle=p.c;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      if(p.shape)ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*1.6);else{ctx.beginPath();ctx.ellipse(0,0,p.s/2,p.s/1.4,0,0,7);ctx.fill();}
+      ctx.restore();});
+    ctx.globalAlpha=1;frame++;
+    if(alive&&frame<200)requestAnimationFrame(draw);else ctx.clearRect(0,0,w,h);
+  }
+  draw();
+}
+
+/* ================= Tab2 训练详情 ================= */
+function renderWeekPick(){
+  const wp=document.getElementById('weekPick');wp.innerHTML='';
+  // 周一到周日顺序
+  const order=[1,2,3,4,5,6,0];
+  order.forEach(dy=>{
+    const e=document.createElement('div');e.className='wd'+(dy===selDay?' active':'');
+    const th=DATA.themes[dy]||'';
+    const short=th.length>3?th.slice(0,2):th;
+    e.innerHTML='<b>'+WD[dy]+'</b>'+short;
+    e.onclick=()=>{selDay=dy;renderWeekPick();renderExList();};
+    wp.appendChild(e);
+  });
+}
+function renderExList(){
+  document.getElementById('dayTitle').textContent='周'+WD[selDay]+' · '+(DATA.themes[selDay]||'');
+  const list=document.getElementById('exList');list.innerHTML='';
+  const acts=DATA.plan[selDay]||[];
+  if(acts.length===0 && !editMode){
+    list.innerHTML='<div class="empty-day">今天没有安排动作</div>';
+  }
+  acts.forEach((a,idx)=>{
+    const card=document.createElement('div');
+    card.className='ex-card'+(editMode?' edit-row':'');
+    const linkTxt=a.linkText?a.linkText:'查看教程';
+    let inner='<div class="ex-ic">'+iconFor(a.name)+'</div><div class="ex-body">'+
+      '<div class="ex-nm">'+esc(a.name)+'</div>'+
+      (a.rep?'<span class="ex-rep">'+esc(a.rep)+'</span>':'')+
+      (a.tip?'<div class="ex-tip">'+esc(a.tip)+'</div>':'')+
+      (a.link?'<a class="ex-link" href="'+esc(a.link)+'" target="_blank" rel="noopener" data-link="'+esc(a.link)+'">▶ '+esc(linkTxt)+'</a>':(a.linkText?'<div class="ex-link" style="color:var(--ink-faint)">'+esc(a.linkText)+'</div>':''))+
+      '</div>';
+    if(editMode){
+      inner+='<div class="row-acts">'+
+        '<div class="ico-btn" data-edit="'+idx+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>'+
+        '<div class="ico-btn del" data-del="'+idx+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></div>'+
+        '</div>';
+    }
+    card.innerHTML=inner;
+    list.appendChild(card);
+  });
+  // 教程链接点击：优先新窗口打开；沙箱/预览中被拦截时降级为复制链接
+  list.querySelectorAll('a[data-link]').forEach(el=>{
+    el.addEventListener('click',ev=>{
+      ev.preventDefault();
+      const url=el.getAttribute('data-link');
+      if(!url)return;
+      let win=null;
+      try{win=window.open(url,'_blank','noopener');}catch(e){win=null;}
+      if(win){return;} // 成功打开
+      // 被拦截：尝试复制到剪贴板并提示
+      const done=()=>toast('链接已复制，请粘贴到浏览器打开');
+      const fail=()=>toast('请长按链接手动复制：'+url);
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(done).catch(()=>{legacyCopy(url)?done():fail();});
+        }else{ legacyCopy(url)?done():fail(); }
+      }catch(e){ legacyCopy(url)?done():fail(); }
+    });
+  });
+  if(editMode){
+    add.onclick=()=>openModal(selDay,null);
+    list.appendChild(add);
+    list.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openModal(selDay,+b.dataset.edit));
+    list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      DATA.plan[selDay].splice(+b.dataset.del,1);save();renderExList();toast('已删除动作');
+    });
+  }
+}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function legacyCopy(text){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand('copy');document.body.removeChild(ta);return ok;}catch(e){return false;}}
+
+/* 动作图标：按名称关键词匹配简化示意 SVG（stroke 继承陶土橙） */
+const ICONS={
+  // 划船类：手拉弹力带（把手+拉力箭头）
+  row:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="14" r="3.2"/><path d="M13 17v9"/><path d="M13 21l7-2 6 3"/><path d="M26 22l8 2"/><path d="M34 20v8"/><path d="M13 26l-3 8M13 26l5 8"/></svg>',
+  // 面拉 / 扩胸：双手向两侧拉开一条带子
+  pull:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 24h28"/><path d="M14 19l-5 5 5 5"/><path d="M34 19l5 5-5 5"/><circle cx="24" cy="13" r="3"/></svg>',
+  // 反向飞鸟：俯身、双臂展开如翅膀
+  fly:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="14" r="3.2"/><path d="M24 17v8"/><path d="M24 20l-12 6M24 20l12 6"/><path d="M12 26l-2 6M36 26l2 6"/></svg>',
+  // 高位下拉：双手上举向下拉
+  pulldown:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h28"/><path d="M16 12l-3 12M32 12l3 12"/><circle cx="24" cy="16" r="3"/><path d="M24 19v10"/><path d="M24 24l-5 6M24 24l5 6"/></svg>',
+  // YTWL：字母示意
+  ytwl:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12l3 5 3-5M10 17v6"/><path d="M19 12h8M23 12v11"/><path d="M30 12l2 11 2-7 2 7 2-11"/><path d="M41 12v11"/></svg>',
+  // 普拉提 / 瑜伽：盘坐冥想
+  yoga:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="13" r="3.4"/><path d="M24 17v7"/><path d="M24 21l-9 5M24 21l9 5"/><path d="M14 33c0-4 4-6 10-6s10 2 10 6z"/></svg>',
+  // 泡沫轴：圆柱滚筒
+  roller:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="13" cy="24" rx="4" ry="10"/><path d="M13 14h22M13 34h22"/><ellipse cx="35" cy="24" rx="4" ry="10"/></svg>',
+  // 猫牛：拱背爬姿
+  cat:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 32c4-14 24-14 28 0"/><path d="M13 32v-6M35 32v-6M21 27v-4M27 27v-4"/><circle cx="38" cy="20" r="1.4" fill="currentColor"/></svg>',
+  // 拉伸：身体伸展+方向箭头
+  stretch:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="13" r="3"/><path d="M20 16l4 9-3 9"/><path d="M20 19l-7 3"/><path d="M24 25l9-4"/><path d="M33 21l1-4M33 21l4 1"/></svg>',
+  // 休息 / 散步：行走的人
+  walk:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="26" cy="12" r="3.2"/><path d="M26 15l-1 11"/><path d="M25 19l-6 3M25 19l7 2"/><path d="M25 26l-5 9M25 26l4 9"/></svg>',
+  // 每日基础流程 / 靠墙：靠墙站立
+  wall:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8v32"/><circle cx="24" cy="15" r="3.2"/><path d="M24 18v12"/><path d="M24 22l7 2"/><path d="M24 30l-3 8M24 30l4 8"/></svg>',
+  // 兜底
+  star:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8l4.7 9.5L39 19l-7.5 7.3L33 37l-9-4.7L15 37l1.5-10.7L9 19l10.3-1.5z"/></svg>'
+};
+function iconFor(name){
+  const n=name||'';
+  if(/YTWL|YTW|YWT/i.test(n))return ICONS.ytwl;
+  if(/面拉|扩胸|Pull-?apart|pull apart/i.test(n))return ICONS.pull;
+  if(/高位下拉|下拉/.test(n))return ICONS.pulldown;
+  if(/飞鸟/.test(n))return ICONS.fly;
+  if(/划船|row/i.test(n))return ICONS.row;
+  if(/泡沫轴/.test(n))return ICONS.roller;
+  if(/猫牛|鸟狗|贝壳/.test(n))return ICONS.cat;
+  if(/拉伸|婴儿式|stretch/i.test(n))return ICONS.stretch;
+  if(/普拉提|瑜伽|核心|yoga|pilates/i.test(n))return ICONS.yoga;
+  if(/休息|散步|walk/i.test(n))return ICONS.walk;
+  if(/基础流程|靠墙|收下巴|门框/.test(n))return ICONS.wall;
+  return ICONS.star;
+}
+
+/* ================= 编辑模态 ================= */
+const modal=document.getElementById('modal');
+function openModal(day,idx){
+  editTarget={day,idx};
+  const isNew=idx===null;
+  document.getElementById('modalTitle').textContent=isNew?'新增动作':'编辑动作';
+  const a=isNew?{name:'',rep:'',tip:'',link:''}:DATA.plan[day][idx];
+  document.getElementById('fName').value=a.name||'';
+  document.getElementById('fRep').value=a.rep||'';
+  document.getElementById('fTip').value=a.tip||'';
+  document.getElementById('fLink').value=a.link||'';
+  modal.classList.add('show');
+}
+document.getElementById('mCancel').onclick=()=>modal.classList.remove('show');
+modal.onclick=(e)=>{if(e.target===modal)modal.classList.remove('show');};
+document.getElementById('mSave').onclick=()=>{
+  const name=document.getElementById('fName').value.trim();
+  if(!name){toast('请填写动作名称');return;}
+  const {day,idx}=editTarget;
+  const prev=(idx!==null && DATA.plan[day] && DATA.plan[day][idx])?DATA.plan[day][idx]:null;
+  const obj={name,rep:document.getElementById('fRep').value.trim(),tip:document.getElementById('fTip').value.trim(),link:document.getElementById('fLink').value.trim(),linkText:(prev&&prev.linkText)?prev.linkText:'查看教程'};
+  if(!DATA.plan[day])DATA.plan[day]=[];
+  if(idx===null)DATA.plan[day].push(obj);else DATA.plan[day][idx]=obj;
+  save();modal.classList.remove('show');renderExList();toast(idx===null?'已新增动作':'已保存修改');
+};
+
+/* ================= Tab 切换 & FAB ================= */
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.tabbar .tb').forEach(tb=>tb.classList.toggle('active',+tb.dataset.tab===t));
+  document.getElementById('page1').classList.toggle('active',t===1);
+  document.getElementById('page2').classList.toggle('active',t===2);
+  // 头部主题标签只在 Tab1 打卡前阶段隐藏，统一不显示；编辑态只对 Tab2 有意义
+  if(t===1){
+    // 退出编辑态
+    if(editMode)toggleEdit(false);
+    document.getElementById('fab').classList.add('hidden'); // Tab1 无需编辑入口
+    // 进入 Tab1：根据是否已打卡决定显示哪屏
+    if(isChecked(todayKey()))showPost(false);else showPre();
+  }else{
+    document.getElementById('fab').classList.remove('hidden');
+    renderWeekPick();renderExList();
+  }
+}
+document.querySelectorAll('.tabbar .tb').forEach(tb=>tb.onclick=()=>switchTab(+tb.dataset.tab));
+
+function toggleEdit(force){
+  editMode=(typeof force==='boolean')?force:!editMode;
+  const fab=document.getElementById('fab');
+  fab.classList.toggle('editing',editMode);
+  fab.innerHTML=editMode
+    ?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg>'
+    :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  document.getElementById('editBanner').classList.toggle('show',editMode);
+  renderExList();
+  if(!editMode)toast('已退出编辑');
+}
+document.getElementById('fab').onclick=()=>{if(curTab===2)toggleEdit();};
+
+/* ================= toast ================= */
+let toastH=null;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastH);toastH=setTimeout(()=>t.classList.remove('show'),1600);}
+
+/* ================= 初始化 ================= */
+renderHead();
+renderPre();
+switchTab(1);
+</script>
+</body>
+</html>
